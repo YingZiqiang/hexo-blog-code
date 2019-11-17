@@ -1,5 +1,3 @@
-from torch.autograd import Variable
-
 from .utils import subsequent_mask
 
 
@@ -15,7 +13,7 @@ class Batch(object):
             self.trg = trg[:, :-1]
             self.trg_y = trg[:, 1:]
             self.trg_mask = self.make_std_mask(self.trg, pad)
-            self.ntokens = (self.trg_y != pad).data.sum()
+            self.ntokens = (self.trg_y != pad).sum().item()
 
     @staticmethod
     def make_std_mask(tgt, pad):
@@ -23,5 +21,5 @@ class Batch(object):
         Create a mask to hide padding and future words.
         """
         tgt_mask = (tgt != pad).unsqueeze(-2)
-        tgt_mask = tgt_mask & Variable(subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
+        tgt_mask = tgt_mask & subsequent_mask(tgt.size(-1))
         return tgt_mask

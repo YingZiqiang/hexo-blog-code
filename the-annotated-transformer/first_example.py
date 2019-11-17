@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from torch.autograd import Variable
 
 from transformer.batch import Batch
 from transformer.flow import make_model, run_epoch
@@ -16,9 +15,7 @@ def data_gen(V, batch, nbatches):
     for i in range(nbatches):
         data = torch.from_numpy(np.random.randint(1, V, size=(batch, 10)))
         data[:, 0] = 1
-        src = Variable(data, requires_grad=False)
-        tgt = Variable(data, requires_grad=False)
-        yield Batch(src, tgt, 0)
+        yield Batch(src=data, trg=data, pad=0)
 
 
 class SimpleLossCompute(object):
@@ -38,7 +35,7 @@ class SimpleLossCompute(object):
         if self.opt is not None:
             self.opt.step()
             self.opt.optimizer.zero_grad()
-        return loss.data[0] * norm
+        return loss.item() * norm
 
 
 if __name__ == "__main__":
@@ -49,15 +46,16 @@ if __name__ == "__main__":
     model_opt = NoamOpt(model.src_embed[0].d_model, 1, 400,
                         torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
 
-    for epoch in range(10):
+    for epoch in range(15):
         model.train()
         run_epoch(data_gen(V, 30, 20), model, SimpleLossCompute(model.generator, criterion, model_opt))
         model.eval()
         print(run_epoch(data_gen(V, 30, 5), model, SimpleLossCompute(model.generator, criterion, None)))
 
     # This code predicts a translation using greedy decoding for simplicity.
+    print()
     print("{}predict{}".format('*' * 10, '*' * 10))
     model.eval()
-    src = Variable(torch.LongTensor([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]))
-    src_mask = Variable(torch.ones(1, 1, 10))
+    src = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]])
+    src_mask = torch.ones(1, 1, 10)
     print(greedy_decode(model, src, src_mask, max_len=10, start_symbol=1))
